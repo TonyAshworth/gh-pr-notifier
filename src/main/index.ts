@@ -2,10 +2,10 @@ import { app, ipcMain, shell } from 'electron'
 import path from 'path'
 import { createTray, createPopover, togglePopover, setTrayUnread, destroyTray } from './tray'
 import { startPoller, stopPoller, restartPoller, getCurrentPRs, getUnreadCount, markAllRead, forceRefresh, setCallbacks } from './poller'
-import { getSettings, saveSettings } from './store'
+import { getSettings, saveSettings, store } from './store'
 import { saveToken, loadToken, clearToken } from './keychain'
-import { validateToken, validateRepo, fetchRepoLabels } from './github'
-import { startDeviceFlow, pollDeviceFlow } from './githubAuth'
+import { validateToken, validateRepo, fetchRepoLabels, fetchUserRepos } from './github'
+import { filterPRsForDisplay } from './state'
 import type { PR } from './github'
 
 let popoverWindow: Electron.BrowserWindow | null = null
@@ -23,11 +23,18 @@ app.whenReady().then(() => {
 
   setCallbacks(
     (prs: PR[]) => {
-      popoverWindow?.webContents.send('prs-updated', prs)
+      const settings = getSettings()
+      popoverWindow?.webContents.send('prs-updated', filterPRsForDisplay(prs, settings))
     },
     (count: number) => {
       setTrayUnread(count > 0)
       popoverWindow?.webContents.send('unread-count-changed', count)
+      if (count > 0 && getSettings().soundEnabled) {
+        popoverWindow?.webContents.send('play-sound')
+      }
+    },
+    (key: string, updatedAt: string) => {
+      popoverWindow?.webContents.send('pr-viewed', key, updatedAt)
     }
   )
 
@@ -49,7 +56,7 @@ app.on('window-all-closed', (e: Electron.Event) => {
 
 // ─── IPC Handlers ───────────────────────────────────────────────────────────
 
-ipcMain.handle('get-prs', () => getCurrentPRs())
+ipcMain.handle('get-prs', () => filterPRsForDisplay(getCurrentPRs(), getSettings()))
 
 ipcMain.handle('get-settings', () => getSettings())
 
@@ -78,6 +85,12 @@ ipcMain.handle('validate-repo', async (_e, repo: string) => {
   return validateRepo(token, repo)
 })
 
+ipcMain.handle('fetch-user-repos', async () => {
+  const token = loadToken()
+  if (!token) return []
+  return fetchUserRepos(token)
+})
+
 ipcMain.handle('fetch-repo-labels', async (_e, repo: string) => {
   const token = loadToken()
   if (!token) return []
@@ -100,18 +113,19 @@ ipcMain.handle('open-pr', (_e, url: string) => {
 
 ipcMain.handle('get-unread-count', () => getUnreadCount())
 
-// OAuth Device Flow
-ipcMain.handle('start-device-flow', async () => {
-  return startDeviceFlow()
+ipcMain.handle('quit', () => app.quit())
+
+ipcMain.handle('get-viewed-prs', () => store.get('viewedPRs'))
+
+ipcMain.handle('mark-pr-viewed', (_e, key: string, updatedAt: string) => {
+  store.set('viewedPRs', { ...store.get('viewedPRs'), [key]: updatedAt })
 })
 
-ipcMain.handle('poll-device-flow', (_e, deviceCode: string, intervalSeconds: number) => {
-  return new Promise<{ login: string } | { error: string }>((resolve) => {
-    pollDeviceFlow(
-      deviceCode,
-      intervalSeconds,
-      (login) => resolve({ login }),
-      (err) => resolve({ error: err })
-    )
-  })
+ipcMain.handle('reset-viewed-prs', () => {
+  store.set('viewedPRs', {})
 })
+
+ipcMain.handle('resize-popover', (_e, height: number) => {
+  popoverWindow?.setSize(380, Math.round(height))
+})
+

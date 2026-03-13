@@ -1,8 +1,10 @@
 import type { Settings } from '../types'
+import { SOUND_OPTIONS } from '../sounds'
 
 interface Props {
   settings: Settings
   onChange: (s: Partial<Settings>) => void
+  onTestSound: () => void
 }
 
 interface ToggleRowProps {
@@ -25,7 +27,7 @@ function ToggleRow({ label, checked, onChange }: ToggleRowProps): JSX.Element {
   )
 }
 
-export default function GeneralSettings({ settings, onChange }: Props): JSX.Element {
+export default function GeneralSettings({ settings, onChange, onTestSound }: Props): JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
@@ -61,11 +63,84 @@ export default function GeneralSettings({ settings, onChange }: Props): JSX.Elem
 
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
         <div style={{ fontWeight: 600, marginBottom: 8 }}>Display</div>
-        <ToggleRow
-          label="Show draft PRs"
-          checked={settings.showDraftPRs}
-          onChange={(v) => onChange({ showDraftPRs: v })}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ToggleRow
+            label="Show draft PRs"
+            checked={settings.showDraftPRs}
+            onChange={(v) => onChange({ showDraftPRs: v })}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ToggleRow
+              label="Play sound on new activity"
+              checked={settings.soundEnabled ?? true}
+              onChange={(v) => onChange({ soundEnabled: v })}
+            />
+            <button
+              onClick={onTestSound}
+              style={{
+                marginLeft: 'auto',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '3px 10px',
+                color: 'var(--text)',
+                fontSize: 11
+              }}
+            >
+              Test
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 13 }}>Sound</span>
+            <select
+              value={settings.notificationSound ?? 'chime'}
+              onChange={(e) => onChange({ notificationSound: e.target.value as Settings['notificationSound'] })}
+              style={{ marginLeft: 'auto' }}
+            >
+              {SOUND_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 13 }}>Theme</span>
+            <select
+              value={settings.theme ?? 'system'}
+              onChange={(e) => {
+                const theme = e.target.value as 'dark' | 'light' | 'system'
+                onChange({ theme })
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+                const isDark = theme === 'dark' || (theme === 'system' && prefersDark)
+                document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+              }}
+              style={{ marginLeft: 'auto' }}
+            >
+              <option value="system">System</option>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>Viewed History</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>
+          Clears which PRs you've opened, making all current PRs appear as unread.
+        </div>
+        <button
+          onClick={() => window.api.resetViewedPRs()}
+          style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '5px 12px',
+            color: 'var(--text)',
+            fontSize: 12
+          }}
+        >
+          Reset viewed history
+        </button>
       </div>
 
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>

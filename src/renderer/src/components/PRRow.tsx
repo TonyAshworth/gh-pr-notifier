@@ -4,6 +4,8 @@ import type { PR } from '../types'
 
 interface Props {
   pr: PR
+  viewedAt: string | undefined
+  onViewed: (key: string, updatedAt: string) => void
 }
 
 function relativeTime(isoDate: string): string {
@@ -16,9 +18,23 @@ function relativeTime(isoDate: string): string {
   return `${days}d ago`
 }
 
-export default function PRRow({ pr }: Props): JSX.Element {
+export function prKey(pr: PR): string {
+  return `${pr.repo}#${pr.number}`
+}
+
+export function isUnread(pr: PR, viewedAt: string | undefined): boolean {
+  if (!viewedAt) return true
+  return pr.updatedAt > viewedAt
+}
+
+export default function PRRow({ pr, viewedAt, onViewed }: Props): JSX.Element {
+  const unread = isUnread(pr, viewedAt)
+  const key = prKey(pr)
+
   const handleClick = (): void => {
     window.api.openPR(pr.url)
+    window.api.markPRViewed(key, pr.updatedAt)
+    onViewed(key, pr.updatedAt)
   }
 
   return (
@@ -31,6 +47,7 @@ export default function PRRow({ pr }: Props): JSX.Element {
         padding: '8px 12px',
         cursor: 'pointer',
         borderBottom: '1px solid var(--border)',
+        borderLeft: unread ? '3px solid var(--accent)' : '3px solid transparent',
         transition: 'background 0.1s'
       }}
       onMouseEnter={(e) => {
@@ -48,7 +65,7 @@ export default function PRRow({ pr }: Props): JSX.Element {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            fontWeight: 500
+            fontWeight: unread ? 600 : 500
           }}
           title={pr.title}
         >

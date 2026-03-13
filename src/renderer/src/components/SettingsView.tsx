@@ -4,11 +4,14 @@ import RepoSettings from './RepoSettings'
 import FilterSettings from './FilterSettings'
 import GeneralSettings from './GeneralSettings'
 import type { Settings } from '../types'
+import type { SoundName } from '../sounds'
 
 type Tab = 'auth' | 'repos' | 'filters' | 'general'
 
 interface Props {
   onClose: () => void
+  onTestSound: () => void
+  onSoundChange: (s: SoundName) => void
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -18,7 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'General' }
 ]
 
-export default function SettingsView({ onClose }: Props): JSX.Element {
+export default function SettingsView({ onClose, onTestSound, onSoundChange }: Props): JSX.Element {
   const [tab, setTab] = useState<Tab>('auth')
   const [settings, setSettings] = useState<Settings | null>(null)
 
@@ -87,9 +90,25 @@ export default function SettingsView({ onClose }: Props): JSX.Element {
             {tab === 'auth' && <AuthSettings />}
             {tab === 'repos' && <RepoSettings settings={settings} onChange={handleChange} />}
             {tab === 'filters' && <FilterSettings settings={settings} onChange={handleChange} />}
-            {tab === 'general' && <GeneralSettings settings={settings} onChange={handleChange} />}
+            {tab === 'general' && <GeneralSettings settings={settings} onChange={(partial) => { handleChange(partial); if (partial.notificationSound) onSoundChange(partial.notificationSound) }} onTestSound={onTestSound} />}
           </>
         )}
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          borderTop: '1px solid var(--border)',
+          padding: '8px 12px',
+          flexShrink: 0
+        }}
+      >
+        <button
+          onClick={() => window.api.quit()}
+          style={{ color: 'var(--danger)', fontSize: 12 }}
+        >
+          Quit GitHub PR Notifier
+        </button>
       </div>
     </div>
   )

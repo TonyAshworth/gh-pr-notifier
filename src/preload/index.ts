@@ -12,6 +12,7 @@ const api = {
   saveToken: (token: string): Promise<void> => ipcRenderer.invoke('save-token', token),
   clearToken: (): Promise<void> => ipcRenderer.invoke('clear-token'),
   hasToken: (): Promise<boolean> => ipcRenderer.invoke('has-token'),
+  fetchUserRepos: (): Promise<string[]> => ipcRenderer.invoke('fetch-user-repos'),
   fetchRepoLabels: (repo: string): Promise<Label[]> =>
     ipcRenderer.invoke('fetch-repo-labels', repo),
   validateRepo: (repo: string): Promise<boolean> => ipcRenderer.invoke('validate-repo', repo),
@@ -21,20 +22,12 @@ const api = {
   openPR: (url: string): Promise<void> => ipcRenderer.invoke('open-pr', url),
   refreshNow: (): Promise<void> => ipcRenderer.invoke('refresh-now'),
   markAllRead: (): Promise<void> => ipcRenderer.invoke('mark-all-read'),
-
-  // OAuth Device Flow
-  startDeviceFlow: (): Promise<{
-    userCode: string
-    verificationUri: string
-    deviceCode: string
-    interval: number
-    expiresIn: number
-  }> => ipcRenderer.invoke('start-device-flow'),
-  pollDeviceFlow: (
-    deviceCode: string,
-    intervalSeconds: number
-  ): Promise<{ login: string } | { error: string }> =>
-    ipcRenderer.invoke('poll-device-flow', deviceCode, intervalSeconds),
+  quit: (): Promise<void> => ipcRenderer.invoke('quit'),
+  resizePopover: (height: number): Promise<void> => ipcRenderer.invoke('resize-popover', height),
+  getViewedPRs: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-viewed-prs'),
+  markPRViewed: (key: string, updatedAt: string): Promise<void> =>
+    ipcRenderer.invoke('mark-pr-viewed', key, updatedAt),
+  resetViewedPRs: (): Promise<void> => ipcRenderer.invoke('reset-viewed-prs'),
 
   // Events
   onPRsUpdated: (cb: (prs: PR[]) => void): (() => void) => {
@@ -46,6 +39,16 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, n: number): void => cb(n)
     ipcRenderer.on('unread-count-changed', handler)
     return () => ipcRenderer.removeListener('unread-count-changed', handler)
+  },
+  onPlaySound: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.on('play-sound', handler)
+    return () => ipcRenderer.removeListener('play-sound', handler)
+  },
+  onPRViewed: (cb: (key: string, updatedAt: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, key: string, updatedAt: string): void => cb(key, updatedAt)
+    ipcRenderer.on('pr-viewed', handler)
+    return () => ipcRenderer.removeListener('pr-viewed', handler)
   }
 }
 

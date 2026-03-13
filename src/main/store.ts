@@ -15,11 +15,15 @@ export interface Settings {
   notifyOnMerged: boolean
   notifyOnClosed: boolean
   showDraftPRs: boolean
+  theme: 'dark' | 'light' | 'system'
+  soundEnabled: boolean
+  notificationSound: 'chime' | 'ping' | 'ding' | 'pop' | 'chord'
 }
 
 interface StoreSchema extends Settings {
   encryptedToken: string
   prState: Record<string, unknown>
+  viewedPRs: Record<string, string>
 }
 
 const defaults: StoreSchema = {
@@ -32,8 +36,12 @@ const defaults: StoreSchema = {
   notifyOnMerged: true,
   notifyOnClosed: false,
   showDraftPRs: false,
+  theme: 'system',
+  soundEnabled: true,
+  notificationSound: 'chime',
   encryptedToken: '',
-  prState: {}
+  prState: {},
+  viewedPRs: {}
 }
 
 export const store = new Store<StoreSchema>({
@@ -51,7 +59,10 @@ export function getSettings(): Settings {
     notifyOnComment: store.get('notifyOnComment'),
     notifyOnMerged: store.get('notifyOnMerged'),
     notifyOnClosed: store.get('notifyOnClosed'),
-    showDraftPRs: store.get('showDraftPRs')
+    showDraftPRs: store.get('showDraftPRs'),
+    theme: store.get('theme'),
+    soundEnabled: store.get('soundEnabled'),
+    notificationSound: store.get('notificationSound')
   }
 }
 

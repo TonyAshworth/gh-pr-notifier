@@ -60,15 +60,15 @@ export default function FilterSettings({ settings, onChange }: Props): JSX.Eleme
       ) : (
         <>
           <LabelSection
-            title="Team Labels"
-            helpText="Notify for PRs belonging to any of these teams"
+            title="Optional Labels"
+            helpText="If any are selected, only show PRs that match at least one"
             labels={labels}
             selected={filter.teamLabels}
             onToggle={(name) => toggleLabel('teamLabels', name)}
           />
           <LabelSection
             title="Required Labels"
-            helpText="Only notify if PR also has ALL of these labels (optional)"
+            helpText="Only show PRs that have ALL of these labels"
             labels={labels}
             selected={filter.requiredLabels}
             onToggle={(name) => toggleLabel('requiredLabels', name)}
@@ -99,7 +99,7 @@ function LabelSection({
       {labels.length === 0 ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No labels found</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 120, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {labels.map((label) => {
             const hex = label.color.startsWith('#') ? label.color : `#${label.color}`
             return (

@@ -41,4 +41,7 @@ export interface Settings {
   notifyOnMerged: boolean
   notifyOnClosed: boolean
   showDraftPRs: boolean
+  theme: 'dark' | 'light' | 'system'
+  soundEnabled: boolean
+  notificationSound: 'chime' | 'ping' | 'ding' | 'pop' | 'chord'
 }

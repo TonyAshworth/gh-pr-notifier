@@ -1,19 +1,19 @@
-import PRRow from './PRRow'
+import PRRow, { prKey } from './PRRow'
 import type { PR } from '../types'
 
 interface Props {
   prs: PR[]
+  viewedPRs: Record<string, string>
+  onViewed: (key: string, updatedAt: string) => void
 }
 
-export default function PRList({ prs }: Props): JSX.Element {
+export default function PRList({ prs, viewedPRs, onViewed }: Props): JSX.Element {
   if (prs.length === 0) {
     return (
       <div
         style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          padding: '24px 12px',
+          textAlign: 'center',
           color: 'var(--text-muted)',
           fontSize: 13
         }}
@@ -23,7 +23,6 @@ export default function PRList({ prs }: Props): JSX.Element {
     )
   }
 
-  // Group by repo
   const byRepo = prs.reduce<Record<string, PR[]>>((acc, pr) => {
     if (!acc[pr.repo]) acc[pr.repo] = []
     acc[pr.repo].push(pr)
@@ -31,7 +30,7 @@ export default function PRList({ prs }: Props): JSX.Element {
   }, {})
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto' }}>
+    <div>
       {Object.entries(byRepo).map(([repo, repoPRs]) => (
         <div key={repo}>
           <div
@@ -51,7 +50,12 @@ export default function PRList({ prs }: Props): JSX.Element {
           {repoPRs
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
             .map((pr) => (
-              <PRRow key={`${pr.repo}#${pr.number}`} pr={pr} />
+              <PRRow
+                key={prKey(pr)}
+                pr={pr}
+                viewedAt={viewedPRs[prKey(pr)]}
+                onViewed={onViewed}
+              />
             ))}
         </div>
       ))}

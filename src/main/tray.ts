@@ -1,9 +1,10 @@
-import { Tray, BrowserWindow, nativeImage, screen } from 'electron'
+import { Tray, BrowserWindow, nativeImage, screen, Menu, app } from 'electron'
 import path from 'path'
 import { is } from '@electron-toolkit/utils'
 
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
+let blurGuard = false
 
 const POPOVER_WIDTH = 380
 const POPOVER_HEIGHT = 520
@@ -15,10 +16,14 @@ function getIconPath(unread: boolean): string {
 
 export function createTray(onToggle: () => void): Tray {
   const icon = nativeImage.createFromPath(getIconPath(false))
+  icon.setTemplateImage(true)
   tray = new Tray(icon)
   tray.setToolTip('GitHub PR Notifier')
 
   tray.on('click', onToggle)
+
+  const contextMenu = Menu.buildFromTemplate([{ label: 'Quit', click: () => app.quit() }])
+  tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
 
   return tray
 }
@@ -26,6 +31,7 @@ export function createTray(onToggle: () => void): Tray {
 export function setTrayUnread(hasUnread: boolean): void {
   if (!tray) return
   const icon = nativeImage.createFromPath(getIconPath(hasUnread))
+  icon.setTemplateImage(true)
   tray.setImage(icon)
 }
 
@@ -48,6 +54,7 @@ export function createPopover(preloadPath: string): BrowserWindow {
   })
 
   popover.on('blur', () => {
+    if (blurGuard) return
     popover?.hide()
   })
 
@@ -68,9 +75,11 @@ export function togglePopover(): void {
     return
   }
 
+  blurGuard = true
   positionPopover()
   popover.show()
   popover.focus()
+  setTimeout(() => { blurGuard = false }, 200)
 }
 
 function positionPopover(): void {

@@ -127,6 +127,16 @@ export function diffPRs(newPRs: PR[], settings: {
   return events
 }
 
+export function filterPRsForDisplay(prs: PR[], settings: {
+  labelFilters: Record<string, LabelFilter>
+  showDraftPRs: boolean
+}): PR[] {
+  return prs.filter((pr) => {
+    if (!settings.showDraftPRs && pr.isDraft) return false
+    return passesLabelFilter(pr, settings.labelFilters[pr.repo])
+  })
+}
+
 function passesLabelFilter(pr: PR, filter: LabelFilter | undefined): boolean {
   if (!filter) return true
   const prLabelNames = pr.labels.map((l) => l.name)

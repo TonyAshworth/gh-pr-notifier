@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@octokit/graphql": "^8.1.1",
-    "electron-store": "^10.0.0"
+    "electron-store": "^8.2.0"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { Settings } from '../types'
 
 interface Props {
@@ -7,30 +7,29 @@ interface Props {
 }
 
 export default function RepoSettings({ settings, onChange }: Props): JSX.Element {
-  const [input, setInput] = useState('')
-  const [validating, setValidating] = useState(false)
-  const [error, setError] = useState('')
+  const [availableRepos, setAvailableRepos] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
 
-  const handleAdd = async (): Promise<void> => {
-    const repo = input.trim()
-    if (!repo.includes('/')) {
-      setError('Format: owner/repo')
-      return
-    }
-    if (settings.watchedRepos.includes(repo)) {
-      setError('Already watching this repo')
-      return
-    }
-    setValidating(true)
-    setError('')
-    const valid = await window.api.validateRepo(repo)
-    setValidating(false)
-    if (!valid) {
-      setError('Repo not found or no access')
-      return
-    }
+  useEffect(() => {
+    window.api.fetchUserRepos().then((repos) => {
+      setAvailableRepos(repos)
+      setLoading(false)
+    })
+  }, [])
+
+  const suggestions = useMemo(() => {
+    const q = search.toLowerCase()
+    return availableRepos.filter(
+      (r) => !settings.watchedRepos.includes(r) && r.toLowerCase().includes(q)
+    )
+  }, [availableRepos, settings.watchedRepos, search])
+
+  const handleAdd = (repo: string): void => {
     onChange({ watchedRepos: [...settings.watchedRepos, repo] })
-    setInput('')
+    setSearch('')
+    setShowDropdown(false)
   }
 
   const handleRemove = (repo: string): void => {
@@ -44,29 +43,78 @@ export default function RepoSettings({ settings, onChange }: Props): JSX.Element
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
+      {/* Search input + dropdown */}
+      <div style={{ position: 'relative' }}>
         <input
-          placeholder="owner/repo"
-          value={input}
-          onChange={(e) => { setInput(e.target.value); setError('') }}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          style={{ flex: 1 }}
+          placeholder={loading ? 'Loading repos...' : 'Search repos…'}
+          value={search}
+          disabled={loading}
+          onChange={(e) => { setSearch(e.target.value); setShowDropdown(true) }}
+          onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          style={{ width: '100%' }}
         />
-        <button
-          onClick={handleAdd}
-          disabled={validating || !input.trim()}
-          style={{
-            background: 'var(--accent)',
-            color: '#fff',
-            borderRadius: 'var(--radius-sm)',
-            padding: '6px 12px'
-          }}
-        >
-          {validating ? '...' : 'Add'}
-        </button>
+        {showDropdown && suggestions.length > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              marginTop: 2,
+              maxHeight: 180,
+              overflowY: 'auto',
+              zIndex: 10
+            }}
+          >
+            {suggestions.map((repo) => (
+              <div
+                key={repo}
+                onMouseDown={() => handleAdd(repo)}
+                style={{
+                  padding: '6px 10px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  borderBottom: '1px solid var(--border)'
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-hover)'
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = ''
+                }}
+              >
+                {repo}
+              </div>
+            ))}
+          </div>
+        )}
+        {showDropdown && !loading && search && suggestions.length === 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              marginTop: 2,
+              padding: '6px 10px',
+              fontSize: 12,
+              color: 'var(--text-muted)',
+              zIndex: 10
+            }}
+          >
+            No matching repos
+          </div>
+        )}
       </div>
-      {error && <div style={{ fontSize: 12, color: 'var(--danger)' }}>{error}</div>}
 
+      {/* Watched repos list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {settings.watchedRepos.length === 0 && (
           <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No repos added yet</div>

@@ -169,18 +169,48 @@ export async function validateRepo(token: string, repo: string): Promise<boolean
   }
 }
 
+export async function fetchUserRepos(token: string): Promise<string[]> {
+  const results: string[] = []
+  let page = 1
+  while (true) {
+    try {
+      const response = await fetch(
+        `https://api.github.com/user/repos?per_page=100&page=${page}&affiliation=owner,collaborator,organization_member&sort=updated`,
+        { headers: { authorization: `bearer ${token}` } }
+      )
+      if (!response.ok) break
+      const data = (await response.json()) as Array<{ full_name: string }>
+      if (data.length === 0) break
+      results.push(...data.map((r) => r.full_name))
+      if (data.length < 100) break
+      page++
+    } catch {
+      break
+    }
+  }
+  return results
+}
+
 export async function fetchRepoLabels(token: string, repo: string): Promise<Label[]> {
   const [owner, name] = repo.split('/')
   if (!owner || !name) return []
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${name}/labels?per_page=100`,
-      { headers: { authorization: `bearer ${token}` } }
-    )
-    if (!response.ok) return []
-    const data = (await response.json()) as Array<{ name: string; color: string }>
-    return data.map((l) => ({ name: l.name, color: l.color }))
-  } catch {
-    return []
+  const results: Label[] = []
+  let page = 1
+  while (true) {
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${name}/labels?per_page=100&page=${page}`,
+        { headers: { authorization: `bearer ${token}` } }
+      )
+      if (!response.ok) break
+      const data = (await response.json()) as Array<{ name: string; color: string }>
+      if (data.length === 0) break
+      results.push(...data.map((l) => ({ name: l.name, color: l.color })))
+      if (data.length < 100) break
+      page++
+    } catch {
+      break
+    }
   }
+  return results
 }
