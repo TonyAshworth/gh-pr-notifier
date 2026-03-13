@@ -1,34 +1,44 @@
 import { Notification, shell } from 'electron'
+import { store } from './store'
 import type { PREvent } from './state'
 
-export function sendNotifications(events: PREvent[]): number {
+type ViewedCallback = (key: string, updatedAt: string) => void
+
+export function sendNotifications(events: PREvent[], onViewed?: ViewedCallback): number {
   let count = 0
   for (const event of events) {
-    const { title, body } = formatNotification(event)
-    const notif = new Notification({ title, body, silent: false })
-    const url = event.pr.url
-    notif.on('click', () => shell.openExternal(url))
+    const { title, subtitle, body } = formatNotification(event)
+    const notif = new Notification({ title, subtitle, body, silent: false })
+    const { pr } = event
+    notif.on('click', () => {
+      shell.openExternal(pr.url)
+      const key = `${pr.repo}#${pr.number}`
+      store.set('viewedPRs', { ...store.get('viewedPRs'), [key]: pr.updatedAt })
+      onViewed?.(key, pr.updatedAt)
+    })
     notif.show()
     count++
   }
   return count
 }
 
-function formatNotification(event: PREvent): { title: string; body: string } {
+function formatNotification(event: PREvent): { title: string; subtitle: string; body: string } {
   const { pr } = event
   const repo = pr.repo
-  const prTitle = `"${pr.title}"`
+  const prTitle = pr.title
 
   switch (event.type) {
     case 'opened':
       return {
         title: `[${repo}] New PR #${pr.number}`,
-        body: `${pr.author.login} opened: ${prTitle}`
+        subtitle: prTitle,
+        body: `Opened by ${pr.author.login}`
       }
     case 'ready_for_review':
       return {
-        title: `[${repo}] PR #${pr.number} ready`,
-        body: `${prTitle} is ready for review`
+        title: `[${repo}] PR #${pr.number} ready for review`,
+        subtitle: prTitle,
+        body: ''
       }
     case 'review_submitted': {
       const stateLabel =
@@ -42,23 +52,27 @@ function formatNotification(event: PREvent): { title: string; body: string } {
         : 'Someone'
       return {
         title: `[${repo}] PR #${pr.number} reviewed`,
+        subtitle: prTitle,
         body: `${lastReviewer} ${stateLabel}`
       }
     }
     case 'new_comment':
       return {
-        title: `[${repo}] PR #${pr.number} comment`,
-        body: `New comment (${pr.commentCount} total)`
+        title: `[${repo}] PR #${pr.number} — new comment`,
+        subtitle: prTitle,
+        body: `${pr.commentCount} total comments`
       }
     case 'merged':
       return {
         title: `[${repo}] PR #${pr.number} merged`,
-        body: `${prTitle} was merged`
+        subtitle: prTitle,
+        body: ''
       }
     case 'closed':
       return {
         title: `[${repo}] PR #${pr.number} closed`,
-        body: `${prTitle} was closed`
+        subtitle: prTitle,
+        body: ''
       }
   }
 }

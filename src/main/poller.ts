@@ -7,22 +7,24 @@ import type { PR } from './github'
 
 type PRsUpdatedCallback = (prs: PR[]) => void
 type UnreadCountCallback = (count: number) => void
+type PRViewedCallback = (key: string, updatedAt: string) => void
 
 let timer: ReturnType<typeof setTimeout> | null = null
-let lastModified: string | null = null
-let pollInterval = 60
 let currentPRs: PR[] = []
 let unreadCount = 0
 
 let onPRsUpdated: PRsUpdatedCallback | null = null
 let onUnreadCountChanged: UnreadCountCallback | null = null
+let onPRViewed: PRViewedCallback | null = null
 
 export function setCallbacks(
   prsUpdated: PRsUpdatedCallback,
-  unreadChanged: UnreadCountCallback
+  unreadChanged: UnreadCountCallback,
+  prViewed: PRViewedCallback
 ): void {
   onPRsUpdated = prsUpdated
   onUnreadCountChanged = unreadChanged
+  onPRViewed = prViewed
 }
 
 export function getCurrentPRs(): PR[] {
@@ -40,8 +42,8 @@ export function markAllRead(): void {
 
 export function startPoller(): void {
   const settings = getSettings()
-  pollInterval = settings.pollIntervalSeconds
-  scheduleNext(0)
+  forceRefresh()
+  scheduleNext(settings.pollIntervalSeconds * 1000)
 }
 
 export function stopPoller(): void {
@@ -71,51 +73,16 @@ async function runPollCycle(): Promise<void> {
   const settings = getSettings()
   if (settings.watchedRepos.length === 0) return
 
-  const hasActivity = await checkNotificationsHeartbeat(token)
-  if (!hasActivity) {
-    console.log('[poller] No new activity (304)')
-    return
-  }
-
-  console.log('[poller] Activity detected, fetching PRs')
+  console.log('[poller] Fetching PRs')
   const prs = await fetchPRsForRepos(token, settings.watchedRepos)
   currentPRs = prs
   onPRsUpdated?.(prs)
 
   const events = diffPRs(prs, settings)
   if (events.length > 0) {
-    const newUnread = sendNotifications(events)
+    const newUnread = sendNotifications(events, onPRViewed ?? undefined)
     unreadCount += newUnread
     onUnreadCountChanged?.(unreadCount)
-  }
-}
-
-async function checkNotificationsHeartbeat(token: string): Promise<boolean> {
-  const headers: Record<string, string> = {
-    authorization: `bearer ${token}`,
-    Accept: 'application/vnd.github.v3+json'
-  }
-  if (lastModified) {
-    headers['If-Modified-Since'] = lastModified
-  }
-
-  try {
-    const response = await fetch('https://api.github.com/notifications', { headers })
-
-    const pollIntervalHeader = response.headers.get('X-Poll-Interval')
-    if (pollIntervalHeader) {
-      pollInterval = Math.max(parseInt(pollIntervalHeader, 10), pollInterval)
-    }
-
-    if (response.status === 304) return false
-
-    const lm = response.headers.get('Last-Modified')
-    if (lm) lastModified = lm
-
-    return response.ok
-  } catch (err) {
-    console.error('[poller] Notifications heartbeat error:', err)
-    return false
   }
 }
 
