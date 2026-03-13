@@ -1,0 +1,44 @@
+export interface Label {
+  name: string
+  color: string
+}
+
+export interface Review {
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING'
+  author: { login: string }
+  submittedAt: string
+}
+
+export interface PR {
+  number: number
+  title: string
+  url: string
+  state: 'OPEN' | 'CLOSED' | 'MERGED'
+  isDraft: boolean
+  updatedAt: string
+  createdAt: string
+  author: { login: string }
+  labels: Label[]
+  reviews: Review[]
+  commentCount: number
+  mergedAt: string | null
+  closedAt: string | null
+  repo: string
+}
+
+export interface LabelFilter {
+  teamLabels: string[]
+  requiredLabels: string[]
+}
+
+export interface Settings {
+  watchedRepos: string[]
+  labelFilters: Record<string, LabelFilter>
+  pollIntervalSeconds: number
+  notifyOnOpened: boolean
+  notifyOnReview: boolean
+  notifyOnComment: boolean
+  notifyOnMerged: boolean
+  notifyOnClosed: boolean
+  showDraftPRs: boolean
+}
