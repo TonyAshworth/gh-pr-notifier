@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { Settings } from '../types'
 import { SOUND_OPTIONS } from '../sounds'
 
@@ -28,6 +29,17 @@ function ToggleRow({ label, checked, onChange }: ToggleRowProps): JSX.Element {
 }
 
 export default function GeneralSettings({ settings, onChange, onTestSound }: Props): JSX.Element {
+  const [launchAtLogin, setLaunchAtLogin] = useState<boolean>(false)
+
+  useEffect(() => {
+    window.api.getLaunchAtLogin().then(setLaunchAtLogin)
+  }, [])
+
+  const handleLaunchAtLogin = (v: boolean): void => {
+    setLaunchAtLogin(v)
+    window.api.setLaunchAtLogin(v)
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
@@ -64,6 +76,11 @@ export default function GeneralSettings({ settings, onChange, onTestSound }: Pro
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
         <div style={{ fontWeight: 600, marginBottom: 8 }}>Display</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ToggleRow
+            label="Launch at login"
+            checked={launchAtLogin}
+            onChange={handleLaunchAtLogin}
+          />
           <ToggleRow
             label="Show draft PRs"
             checked={settings.showDraftPRs}

@@ -45,6 +45,9 @@ const api = {
     ipcRenderer.on('play-sound', handler)
     return () => ipcRenderer.removeListener('play-sound', handler)
   },
+  getLaunchAtLogin: (): Promise<boolean> => ipcRenderer.invoke('get-launch-at-login'),
+  setLaunchAtLogin: (enable: boolean): Promise<void> => ipcRenderer.invoke('set-launch-at-login', enable),
+
   onPRViewed: (cb: (key: string, updatedAt: string) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, key: string, updatedAt: string): void => cb(key, updatedAt)
     ipcRenderer.on('pr-viewed', handler)

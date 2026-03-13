@@ -129,3 +129,11 @@ ipcMain.handle('resize-popover', (_e, height: number) => {
   popoverWindow?.setSize(380, Math.round(height))
 })
 
+ipcMain.handle('get-launch-at-login', () => {
+  return app.getLoginItemSettings().openAtLogin
+})
+
+ipcMain.handle('set-launch-at-login', (_e, enable: boolean) => {
+  app.setLoginItemSettings({ openAtLogin: enable })
+})
+

@@ -28,6 +28,8 @@ declare global {
       onPRsUpdated(cb: (prs: PR[]) => void): () => void
       onUnreadCountChanged(cb: (n: number) => void): () => void
       onPlaySound(cb: () => void): () => void
+      getLaunchAtLogin(): Promise<boolean>
+      setLaunchAtLogin(enable: boolean): Promise<void>
       onPRViewed(cb: (key: string, updatedAt: string) => void): () => void
     }
   }
