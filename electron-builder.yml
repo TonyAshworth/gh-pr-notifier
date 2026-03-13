@@ -1,0 +1,44 @@
+appId: com.gh-pr-notifier.app
+productName: GitHub PR Notifier
+copyright: Copyright © 2024
+
+directories:
+  output: build
+  buildResources: resources
+
+files:
+  - out/**/*
+
+mac:
+  category: public.app-category.developer-tools
+  icon: resources/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  title: GitHub PR Notifier
+  background: resources/dmg-background.png
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Code signing — set these env vars in CI or locally:
+#   CSC_LINK         — path or base64 of .p12 signing certificate
+#   CSC_KEY_PASSWORD — certificate password
+#
+# Notarization — set these env vars:
+#   APPLE_ID              — your Apple ID email
+#   APPLE_APP_SPECIFIC_PASSWORD — app-specific password
+#   APPLE_TEAM_ID         — your 10-char Team ID
+afterSign: resources/notarize.js
