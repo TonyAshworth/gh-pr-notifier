@@ -73,9 +73,13 @@ ipcMain.handle('get-prs', () => filterPRsForDisplay(getCurrentPRs(), getSettings
 
 ipcMain.handle('get-settings', () => getSettings())
 
+const POLL_RELEVANT_KEYS = new Set(['watchedRepos', 'labelFilters', 'pollIntervalSeconds', 'showDraftPRs'])
+
 ipcMain.handle('save-settings', (_e, partial) => {
   saveSettings(partial)
-  restartPoller()
+  if (Object.keys(partial).some((k) => POLL_RELEVANT_KEYS.has(k))) {
+    restartPoller()
+  }
   updateTrayIcon()
 })
 
