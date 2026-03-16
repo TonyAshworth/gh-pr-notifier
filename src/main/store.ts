@@ -5,6 +5,18 @@ export interface LabelFilter {
   requiredLabels: string[]
 }
 
+export type IconColor =
+  | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal'
+  | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink'
+  | 'black' | 'white' | 'gray'
+
+export type IconFill = 'solid' | 'outline' | 'stripes' | 'dots' | 'crosshatch'
+
+export interface IconStateConfig {
+  color: IconColor
+  fill: IconFill
+}
+
 export interface Settings {
   watchedRepos: string[]
   labelFilters: Record<string, LabelFilter>
@@ -18,6 +30,9 @@ export interface Settings {
   theme: 'dark' | 'light' | 'system'
   soundEnabled: boolean
   notificationSound: 'chime' | 'ping' | 'ding' | 'pop' | 'chord'
+  iconNoPRs: IconStateConfig
+  iconAllViewed: IconStateConfig
+  iconUnread: IconStateConfig
 }
 
 interface StoreSchema extends Settings {
@@ -39,6 +54,9 @@ const defaults: StoreSchema = {
   theme: 'system',
   soundEnabled: true,
   notificationSound: 'chime',
+  iconNoPRs:     { color: 'black', fill: 'outline' },
+  iconAllViewed: { color: 'green', fill: 'solid' },
+  iconUnread:    { color: 'red',   fill: 'solid' },
   encryptedToken: '',
   prState: {},
   viewedPRs: {}
@@ -62,7 +80,10 @@ export function getSettings(): Settings {
     showDraftPRs: store.get('showDraftPRs'),
     theme: store.get('theme'),
     soundEnabled: store.get('soundEnabled'),
-    notificationSound: store.get('notificationSound')
+    notificationSound: store.get('notificationSound'),
+    iconNoPRs: store.get('iconNoPRs'),
+    iconAllViewed: store.get('iconAllViewed'),
+    iconUnread: store.get('iconUnread'),
   }
 }
 

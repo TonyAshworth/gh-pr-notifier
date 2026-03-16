@@ -3,10 +3,11 @@ import AuthSettings from './AuthSettings'
 import RepoSettings from './RepoSettings'
 import FilterSettings from './FilterSettings'
 import GeneralSettings from './GeneralSettings'
+import IconSettings from './IconSettings'
 import type { Settings } from '../types'
 import type { SoundName } from '../sounds'
 
-type Tab = 'auth' | 'repos' | 'filters' | 'general'
+type Tab = 'auth' | 'repos' | 'filters' | 'general' | 'icon'
 
 interface Props {
   onClose: () => void
@@ -18,7 +19,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'auth', label: 'Auth' },
   { id: 'repos', label: 'Repos' },
   { id: 'filters', label: 'Filters' },
-  { id: 'general', label: 'General' }
+  { id: 'general', label: 'General' },
+  { id: 'icon', label: 'Icon' },
 ]
 
 export default function SettingsView({ onClose, onTestSound, onSoundChange }: Props): JSX.Element {
@@ -91,6 +93,7 @@ export default function SettingsView({ onClose, onTestSound, onSoundChange }: Pr
             {tab === 'repos' && <RepoSettings settings={settings} onChange={handleChange} />}
             {tab === 'filters' && <FilterSettings settings={settings} onChange={handleChange} />}
             {tab === 'general' && <GeneralSettings settings={settings} onChange={(partial) => { handleChange(partial); if (partial.notificationSound) onSoundChange(partial.notificationSound) }} onTestSound={onTestSound} />}
+            {tab === 'icon' && <IconSettings settings={settings} onChange={handleChange} />}
           </>
         )}
       </div>

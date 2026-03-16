@@ -1,6 +1,7 @@
-import { Tray, BrowserWindow, nativeImage, screen, Menu, app } from 'electron'
-import path from 'path'
+import { Tray, BrowserWindow, screen, Menu, app } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import { generateTrayIcon } from './iconGenerator'
+import type { IconStateConfig } from './store'
 
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
@@ -9,15 +10,9 @@ let blurGuard = false
 const POPOVER_WIDTH = 380
 const POPOVER_HEIGHT = 520
 
-function getIconPath(unread: boolean): string {
-  const name = unread ? 'trayTemplateUnread' : 'trayTemplate'
-  return path.join(__dirname, '../../resources', `${name}.png`)
-}
-
 export function createTray(onToggle: () => void): Tray {
-  const icon = nativeImage.createFromPath(getIconPath(false))
-  icon.setTemplateImage(true)
-  tray = new Tray(icon)
+  const defaultConfig: IconStateConfig = { color: 'black', fill: 'outline' }
+  tray = new Tray(generateTrayIcon(defaultConfig))
   tray.setToolTip('GitHub PR Notifier')
 
   tray.on('click', onToggle)
@@ -28,11 +23,9 @@ export function createTray(onToggle: () => void): Tray {
   return tray
 }
 
-export function setTrayUnread(hasUnread: boolean): void {
+export function setTrayIcon(config: IconStateConfig): void {
   if (!tray) return
-  const icon = nativeImage.createFromPath(getIconPath(hasUnread))
-  icon.setTemplateImage(true)
-  tray.setImage(icon)
+  tray.setImage(generateTrayIcon(config))
 }
 
 export function createPopover(preloadPath: string): BrowserWindow {

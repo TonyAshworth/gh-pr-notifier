@@ -31,6 +31,18 @@ export interface LabelFilter {
   requiredLabels: string[]
 }
 
+export type IconColor =
+  | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal'
+  | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink'
+  | 'black' | 'white' | 'gray'
+
+export type IconFill = 'solid' | 'outline' | 'stripes' | 'dots' | 'crosshatch'
+
+export interface IconStateConfig {
+  color: IconColor
+  fill: IconFill
+}
+
 export interface Settings {
   watchedRepos: string[]
   labelFilters: Record<string, LabelFilter>
@@ -44,4 +56,7 @@ export interface Settings {
   theme: 'dark' | 'light' | 'system'
   soundEnabled: boolean
   notificationSound: 'chime' | 'ping' | 'ding' | 'pop' | 'chord'
+  iconNoPRs: IconStateConfig
+  iconAllViewed: IconStateConfig
+  iconUnread: IconStateConfig
 }

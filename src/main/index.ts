@@ -1,6 +1,6 @@
 import { app, ipcMain, shell } from 'electron'
 import path from 'path'
-import { createTray, createPopover, togglePopover, setTrayUnread, destroyTray } from './tray'
+import { createTray, createPopover, togglePopover, setTrayIcon, destroyTray } from './tray'
 import { startPoller, stopPoller, restartPoller, getCurrentPRs, getUnreadCount, markAllRead, forceRefresh, setCallbacks } from './poller'
 import { getSettings, saveSettings, store } from './store'
 import { saveToken, loadToken, clearToken } from './keychain'
@@ -9,6 +9,18 @@ import { filterPRsForDisplay } from './state'
 import type { PR } from './github'
 
 let popoverWindow: Electron.BrowserWindow | null = null
+
+function updateTrayIcon(): void {
+  const settings = getSettings()
+  const filtered = filterPRsForDisplay(getCurrentPRs(), settings)
+  const count = getUnreadCount()
+  const config = count > 0
+    ? settings.iconUnread
+    : filtered.length > 0
+      ? settings.iconAllViewed
+      : settings.iconNoPRs
+  setTrayIcon(config)
+}
 
 app.setName('GitHub PR Notifier')
 
@@ -25,9 +37,10 @@ app.whenReady().then(() => {
     (prs: PR[]) => {
       const settings = getSettings()
       popoverWindow?.webContents.send('prs-updated', filterPRsForDisplay(prs, settings))
+      updateTrayIcon()
     },
     (count: number) => {
-      setTrayUnread(count > 0)
+      updateTrayIcon()
       popoverWindow?.webContents.send('unread-count-changed', count)
       if (count > 0 && getSettings().soundEnabled) {
         popoverWindow?.webContents.send('play-sound')
@@ -63,6 +76,7 @@ ipcMain.handle('get-settings', () => getSettings())
 ipcMain.handle('save-settings', (_e, partial) => {
   saveSettings(partial)
   restartPoller()
+  updateTrayIcon()
 })
 
 ipcMain.handle('validate-token', async (_e, token: string) => {
@@ -103,7 +117,7 @@ ipcMain.handle('refresh-now', async () => {
 
 ipcMain.handle('mark-all-read', () => {
   markAllRead()
-  setTrayUnread(false)
+  updateTrayIcon()
   popoverWindow?.webContents.send('unread-count-changed', 0)
 })
 
