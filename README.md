@@ -31,7 +31,7 @@ Choose which events trigger native macOS notifications (new PR, review, comment,
 ![General settings — display](docs/screenshots/settings-general-display.png)
 
 ### Icon
-Customize the tray icon independently for each PR state: **No PRs**, **All Reviewed**, **Attention needed**, and **Has unread**. Pick any color from the palette and choose a fill style — Solid, Outline, Stripes, Dots, or Crosshatch. Patterns are useful as colorblind-friendly alternatives when combined with Black or White.
+Customize the tray icon independently for each PR state: **No PRs**, **All Reviewed**, and **Needs Review**. Pick any color from the palette and choose a fill style — Solid, Outline, Stripes, Dots, or Crosshatch. Patterns are useful as colorblind-friendly alternatives when combined with Black or White.
 
 ![Icon settings](docs/screenshots/settings-icon.png)
 
