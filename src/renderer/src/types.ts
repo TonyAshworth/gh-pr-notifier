@@ -26,11 +26,6 @@ export interface PR {
   repo: string
 }
 
-export interface LabelFilter {
-  teamLabels: string[]
-  requiredLabels: string[]
-}
-
 export type IconColor =
   | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal'
   | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink'
@@ -45,7 +40,7 @@ export interface IconStateConfig {
 
 export interface Settings {
   watchedRepos: string[]
-  labelFilters: Record<string, LabelFilter>
+  labelFilters: Record<string, string>
   pollIntervalSeconds: number
   notifyOnOpened: boolean
   notifyOnReview: boolean

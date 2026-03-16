@@ -1,6 +1,5 @@
 import { store } from './store'
 import type { PR } from './github'
-import type { LabelFilter } from './store'
 
 export type PREventType =
   | 'opened'
@@ -31,7 +30,7 @@ function snapshotKey(pr: PR): string {
 }
 
 export function diffPRs(newPRs: PR[], settings: {
-  labelFilters: Record<string, LabelFilter>
+  labelFilters: Record<string, string>
   showDraftPRs: boolean
   notifyOnOpened: boolean
   notifyOnReview: boolean
@@ -128,7 +127,7 @@ export function diffPRs(newPRs: PR[], settings: {
 }
 
 export function filterPRsForDisplay(prs: PR[], settings: {
-  labelFilters: Record<string, LabelFilter>
+  labelFilters: Record<string, string>
   showDraftPRs: boolean
 }): PR[] {
   return prs.filter((pr) => {
@@ -137,17 +136,81 @@ export function filterPRsForDisplay(prs: PR[], settings: {
   })
 }
 
-function passesLabelFilter(pr: PR, filter: LabelFilter | undefined): boolean {
-  if (!filter) return true
-  const prLabelNames = pr.labels.map((l) => l.name)
+function passesLabelFilter(pr: PR, filter: string | undefined): boolean {
+  if (!filter || !filter.trim()) return true
+  return evaluateLabelExpression(filter, pr.labels.map((l) => l.name))
+}
 
-  const teamPass =
-    filter.teamLabels.length === 0 ||
-    filter.teamLabels.some((l) => prLabelNames.includes(l))
+function tokenizeExpr(expr: string): string[] {
+  const tokens: string[] = []
+  let i = 0
+  while (i < expr.length) {
+    if (/\s/.test(expr[i])) { i++; continue }
+    if (expr[i] === '(' || expr[i] === ')') { tokens.push(expr[i++]); continue }
+    if (expr[i] === '"') {
+      i++
+      let name = ''
+      while (i < expr.length && expr[i] !== '"') name += expr[i++]
+      if (expr[i] === '"') i++
+      tokens.push(name)
+      continue
+    }
+    let word = ''
+    while (i < expr.length && !/[\s()]/.test(expr[i])) word += expr[i++]
+    if (word) tokens.push(word)
+  }
+  return tokens
+}
 
-  const requiredPass =
-    filter.requiredLabels.length === 0 ||
-    filter.requiredLabels.every((l) => prLabelNames.includes(l))
+function evaluateLabelExpression(expr: string, prLabels: string[]): boolean {
+  const tokens = tokenizeExpr(expr)
+  let pos = 0
 
-  return teamPass && requiredPass
+  const peek = (): string | undefined => tokens[pos]
+  const consume = (): string => tokens[pos++]
+
+  function parseExpr(): boolean { return parseOr() }
+
+  function parseOr(): boolean {
+    let left = parseAnd()
+    while (peek()?.toUpperCase() === 'OR') {
+      consume()
+      const right = parseAnd()
+      left = left || right
+    }
+    return left
+  }
+
+  function parseAnd(): boolean {
+    let left = parseFactor()
+    while (peek()?.toUpperCase() === 'AND') {
+      consume()
+      const right = parseFactor()
+      left = left && right
+    }
+    return left
+  }
+
+  function parseFactor(): boolean {
+    const tok = peek()
+    if (!tok) return true
+    if (tok === '(') {
+      consume()
+      const result = parseExpr()
+      if (peek() === ')') consume()
+      return result
+    }
+    const upper = tok.toUpperCase()
+    if (upper !== 'AND' && upper !== 'OR' && tok !== ')') {
+      consume()
+      return prLabels.includes(tok)
+    }
+    return true
+  }
+
+  try {
+    return parseExpr()
+  } catch {
+    return true
+  }
 }

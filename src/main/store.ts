@@ -1,10 +1,5 @@
 import Store from 'electron-store'
 
-export interface LabelFilter {
-  teamLabels: string[]
-  requiredLabels: string[]
-}
-
 export type IconColor =
   | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal'
   | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink'
@@ -19,7 +14,7 @@ export interface IconStateConfig {
 
 export interface Settings {
   watchedRepos: string[]
-  labelFilters: Record<string, LabelFilter>
+  labelFilters: Record<string, string>
   pollIntervalSeconds: number
   notifyOnOpened: boolean
   notifyOnReview: boolean
@@ -67,10 +62,34 @@ export const store = new Store<StoreSchema>({
   defaults
 })
 
+function migrateLabelFilters(raw: Record<string, unknown>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [repo, filter] of Object.entries(raw)) {
+    if (typeof filter === 'string') {
+      result[repo] = filter
+    } else if (filter && typeof filter === 'object') {
+      // Migrate from old { teamLabels, requiredLabels } format
+      const old = filter as { teamLabels?: string[]; requiredLabels?: string[] }
+      const parts: string[] = []
+      if (old.teamLabels?.length) {
+        const quoted = old.teamLabels.map((l) => (/[\s()]/.test(l) ? `"${l}"` : l))
+        parts.push(quoted.length === 1 ? quoted[0] : `(${quoted.join(' OR ')})`)
+      }
+      if (old.requiredLabels?.length) {
+        for (const l of old.requiredLabels) {
+          parts.push(/[\s()]/.test(l) ? `"${l}"` : l)
+        }
+      }
+      result[repo] = parts.join(' AND ')
+    }
+  }
+  return result
+}
+
 export function getSettings(): Settings {
   return {
     watchedRepos: store.get('watchedRepos'),
-    labelFilters: store.get('labelFilters'),
+    labelFilters: migrateLabelFilters(store.get('labelFilters') as Record<string, unknown>),
     pollIntervalSeconds: store.get('pollIntervalSeconds'),
     notifyOnOpened: store.get('notifyOnOpened'),
     notifyOnReview: store.get('notifyOnReview'),
