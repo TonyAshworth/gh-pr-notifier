@@ -99,7 +99,7 @@ export default function PopoverView({ onOpenSettings }: Props): JSX.Element {
           style={{ color: 'var(--text-muted)', fontSize: 16, lineHeight: 1, padding: '2px 4px' }}
           title="Refresh now"
         >
-          {refreshing ? '…' : '↻'}
+          {refreshing ? <span className="spinner" aria-label="Refreshing" /> : '↻'}
         </button>
         <button
           onClick={onOpenSettings}

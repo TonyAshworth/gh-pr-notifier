@@ -99,3 +99,19 @@ a {
   display: flex;
   flex-direction: column;
 }
+
+@keyframes spin-frames {
+  0%  { content: '⠋'; }
+  12% { content: '⠙'; }
+  25% { content: '⠹'; }
+  37% { content: '⠸'; }
+  50% { content: '⠼'; }
+  62% { content: '⠴'; }
+  75% { content: '⠦'; }
+  87% { content: '⠧'; }
+}
+
+.spinner::before {
+  content: '⠋';
+  animation: spin-frames 0.8s steps(1) infinite;
+}
