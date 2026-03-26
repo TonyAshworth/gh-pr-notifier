@@ -152,6 +152,16 @@ ipcMain.handle('get-launch-at-login', () => {
 })
 
 ipcMain.handle('set-launch-at-login', (_e, enable: boolean) => {
-  app.setLoginItemSettings({ openAtLogin: enable })
+  if (app.isPackaged) {
+    app.setLoginItemSettings({ openAtLogin: enable })
+  } else {
+    // In dev mode the execPath is the raw Electron binary; pass the app path
+    // as an argument so the login item launches the app correctly.
+    app.setLoginItemSettings({
+      openAtLogin: enable,
+      path: process.execPath,
+      args: [app.getAppPath()]
+    })
+  }
 })
 

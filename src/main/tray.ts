@@ -1,4 +1,5 @@
 import { Tray, BrowserWindow, screen, Menu, app } from 'electron'
+import path from 'path'
 import { is } from '@electron-toolkit/utils'
 import { generateTrayIcon } from './iconGenerator'
 import type { IconStateConfig } from './store'
