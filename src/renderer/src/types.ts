@@ -26,6 +26,17 @@ export interface PR {
   repo: string
 }
 
+export interface PRGroup {
+  label: string
+  prs: PR[]
+  subgroups: PRGroup[]
+}
+
+export interface GroupedPRData {
+  grouped: boolean
+  groups: PRGroup[]
+}
+
 export type IconColor =
   | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal'
   | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink'

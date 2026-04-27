@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import PRList from './PRList'
-import type { PR } from '../types'
+import type { GroupedPRData } from '../types'
 
 interface Props {
   onOpenSettings: () => void
@@ -9,18 +9,18 @@ interface Props {
 const MAX_LIST_HEIGHT = 500
 
 export default function PopoverView({ onOpenSettings }: Props): JSX.Element {
-  const [prs, setPRs] = useState<PR[]>([])
+  const [prData, setPRData] = useState<GroupedPRData>({ grouped: false, groups: [] })
   const [viewedPRs, setViewedPRs] = useState<Record<string, string>>({})
   const [unreadCount, setUnreadCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    window.api.getPRs().then(setPRs)
+    window.api.getPRs().then(setPRData)
     window.api.getUnreadCount().then(setUnreadCount)
     window.api.getViewedPRs().then(setViewedPRs)
 
-    const removePRs = window.api.onPRsUpdated(setPRs)
+    const removePRs = window.api.onPRsUpdated(setPRData)
     const removeUnread = window.api.onUnreadCountChanged(setUnreadCount)
     const removeViewed = window.api.onPRViewed((key, updatedAt) => {
       setViewedPRs((prev) => ({ ...prev, [key]: updatedAt }))
@@ -37,7 +37,7 @@ export default function PopoverView({ onOpenSettings }: Props): JSX.Element {
     if (!containerRef.current) return
     const height = Math.max(80, containerRef.current.scrollHeight)
     window.api.resizePopover(height)
-  }, [prs])
+  }, [prData])
 
   const handleViewed = useCallback((key: string, updatedAt: string): void => {
     setViewedPRs((prev) => ({ ...prev, [key]: updatedAt }))
@@ -111,7 +111,7 @@ export default function PopoverView({ onOpenSettings }: Props): JSX.Element {
       </div>
 
       <div style={{ maxHeight: MAX_LIST_HEIGHT, overflowY: 'auto' }}>
-        <PRList prs={prs} viewedPRs={viewedPRs} onViewed={handleViewed} />
+        <PRList data={prData} viewedPRs={viewedPRs} onViewed={handleViewed} />
       </div>
     </div>
   )

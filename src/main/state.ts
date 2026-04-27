@@ -1,5 +1,5 @@
 import { store } from './store'
-import type { PR } from './github'
+import type { PR, PRGroup, GroupedPRData } from './github'
 
 export type PREventType =
   | 'opened'
@@ -13,6 +13,15 @@ export interface PREvent {
   type: PREventType
   pr: PR
   reviewState?: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED'
+}
+
+type ASTNode =
+  | { type: 'label'; name: string }
+  | { type: 'and'; children: ASTNode[] }
+  | { type: 'or'; children: ASTNode[] }
+
+interface GroupingLevel {
+  labels: string[]
 }
 
 interface PersistedPRState {
@@ -129,11 +138,27 @@ export function diffPRs(newPRs: PR[], settings: {
 export function filterPRsForDisplay(prs: PR[], settings: {
   labelFilters: Record<string, string>
   showDraftPRs: boolean
-}): PR[] {
-  return prs.filter((pr) => {
+}): GroupedPRData {
+  const filtered = prs.filter((pr) => {
     if (!settings.showDraftPRs && pr.isDraft) return false
     return passesLabelFilter(pr, settings.labelFilters[pr.repo])
   })
+
+  let hierarchyToUse: GroupingLevel[] = []
+  for (const filter of Object.values(settings.labelFilters)) {
+    if (!filter || !filter.trim()) continue
+    const ast = parseFilterToAST(filter)
+    const hierarchy = extractGroupingHierarchy(ast)
+    if (hierarchy.length > 0) {
+      hierarchyToUse = hierarchy
+      break
+    }
+  }
+
+  return {
+    grouped: hierarchyToUse.length > 0,
+    groups: buildGroupHierarchy(filtered, hierarchyToUse)
+  }
 }
 
 function passesLabelFilter(pr: PR, filter: string | undefined): boolean {
@@ -162,38 +187,38 @@ function tokenizeExpr(expr: string): string[] {
   return tokens
 }
 
-function evaluateLabelExpression(expr: string, prLabels: string[]): boolean {
+function parseFilterToAST(expr: string): ASTNode | null {
   const tokens = tokenizeExpr(expr)
   let pos = 0
 
   const peek = (): string | undefined => tokens[pos]
   const consume = (): string => tokens[pos++]
 
-  function parseExpr(): boolean { return parseOr() }
+  function parseExpr(): ASTNode {
+    return parseOr()
+  }
 
-  function parseOr(): boolean {
-    let left = parseAnd()
+  function parseOr(): ASTNode {
+    const children: ASTNode[] = [parseAnd()]
     while (peek()?.toUpperCase() === 'OR') {
       consume()
-      const right = parseAnd()
-      left = left || right
+      children.push(parseAnd())
     }
-    return left
+    return children.length === 1 ? children[0] : { type: 'or', children }
   }
 
-  function parseAnd(): boolean {
-    let left = parseFactor()
+  function parseAnd(): ASTNode {
+    const children: ASTNode[] = [parseFactor()]
     while (peek()?.toUpperCase() === 'AND') {
       consume()
-      const right = parseFactor()
-      left = left && right
+      children.push(parseFactor())
     }
-    return left
+    return children.length === 1 ? children[0] : { type: 'and', children }
   }
 
-  function parseFactor(): boolean {
+  function parseFactor(): ASTNode {
     const tok = peek()
-    if (!tok) return true
+    if (!tok) return { type: 'label', name: '' }
     if (tok === '(') {
       consume()
       const result = parseExpr()
@@ -203,14 +228,146 @@ function evaluateLabelExpression(expr: string, prLabels: string[]): boolean {
     const upper = tok.toUpperCase()
     if (upper !== 'AND' && upper !== 'OR' && tok !== ')') {
       consume()
-      return prLabels.includes(tok)
+      return { type: 'label', name: tok }
     }
-    return true
+    return { type: 'label', name: '' }
   }
 
   try {
     return parseExpr()
   } catch {
-    return true
+    return null
   }
+}
+
+function evaluateAST(node: ASTNode | null, prLabels: string[]): boolean {
+  if (!node) return true
+  switch (node.type) {
+    case 'label':
+      return node.name === '' || prLabels.includes(node.name)
+    case 'and':
+      return node.children.every(child => evaluateAST(child, prLabels))
+    case 'or':
+      return node.children.some(child => evaluateAST(child, prLabels))
+  }
+}
+
+function evaluateLabelExpression(expr: string, prLabels: string[]): boolean {
+  const ast = parseFilterToAST(expr)
+  return evaluateAST(ast, prLabels)
+}
+
+function extractGroupingHierarchy(ast: ASTNode | null): GroupingLevel[] {
+  if (!ast) return []
+
+  const orClauses = extractOrClauses(ast)
+  return orClauses.map(orNode => ({
+    labels: extractLabelsFromOr(orNode)
+  }))
+}
+
+function extractOrClauses(node: ASTNode): ASTNode[] {
+  if (node.type === 'or') {
+    return [node]
+  }
+
+  if (node.type === 'and') {
+    return node.children.filter(child => child.type === 'or')
+  }
+
+  return []
+}
+
+function extractLabelsFromOr(orNode: ASTNode): string[] {
+  if (orNode.type !== 'or') return []
+
+  return orNode.children
+    .filter(child => child.type === 'label')
+    .map(child => (child as { type: 'label'; name: string }).name)
+    .filter(name => name !== '')
+}
+
+function assignPRToGroupPath(pr: PR, hierarchy: GroupingLevel[]): string[] {
+  const prLabelNames = pr.labels.map(l => l.name)
+  const path: string[] = []
+
+  for (const level of hierarchy) {
+    const match = level.labels.find(label => prLabelNames.includes(label))
+    if (match) {
+      path.push(match)
+    } else {
+      return []
+    }
+  }
+
+  return path
+}
+
+function sortByUpdatedAt(a: PR, b: PR): number {
+  return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+}
+
+function buildRepoGroups(prs: PR[]): PRGroup[] {
+  const byRepo = new Map<string, PR[]>()
+
+  for (const pr of prs) {
+    if (!byRepo.has(pr.repo)) {
+      byRepo.set(pr.repo, [])
+    }
+    byRepo.get(pr.repo)!.push(pr)
+  }
+
+  return Array.from(byRepo.entries())
+    .map(([repo, repoPRs]) => ({
+      label: repo,
+      prs: repoPRs.sort(sortByUpdatedAt),
+      subgroups: []
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function buildNestedGroups(
+  prPaths: Array<{ pr: PR; path: string[] }>,
+  level: number,
+  hierarchy: GroupingLevel[]
+): PRGroup[] {
+  if (level >= hierarchy.length) {
+    return []
+  }
+
+  const grouped = new Map<string, Array<{ pr: PR; path: string[] }>>()
+
+  for (const item of prPaths) {
+    const groupLabel = item.path[level]
+    if (!grouped.has(groupLabel)) {
+      grouped.set(groupLabel, [])
+    }
+    grouped.get(groupLabel)!.push(item)
+  }
+
+  const groups: PRGroup[] = []
+
+  for (const [label, items] of grouped.entries()) {
+    const isLeaf = level === hierarchy.length - 1
+
+    groups.push({
+      label,
+      prs: isLeaf ? items.map(i => i.pr).sort(sortByUpdatedAt) : [],
+      subgroups: isLeaf ? [] : buildNestedGroups(items, level + 1, hierarchy)
+    })
+  }
+
+  return groups.sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function buildGroupHierarchy(prs: PR[], hierarchy: GroupingLevel[]): PRGroup[] {
+  if (hierarchy.length === 0) {
+    return buildRepoGroups(prs)
+  }
+
+  const prPaths = prs
+    .map(pr => ({ pr, path: assignPRToGroupPath(pr, hierarchy) }))
+    .filter(({ path }) => path.length > 0)
+
+  return buildNestedGroups(prPaths, 0, hierarchy)
 }

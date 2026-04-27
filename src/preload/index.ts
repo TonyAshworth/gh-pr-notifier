@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { PR, Label } from '../main/github'
+import type { PR, Label, GroupedPRData } from '../main/github'
 import type { Settings } from '../main/store'
 
 const api = {
   // Data
-  getPRs: (): Promise<PR[]> => ipcRenderer.invoke('get-prs'),
+  getPRs: (): Promise<GroupedPRData> => ipcRenderer.invoke('get-prs'),
   getSettings: (): Promise<Settings> => ipcRenderer.invoke('get-settings'),
   saveSettings: (s: Partial<Settings>): Promise<void> => ipcRenderer.invoke('save-settings', s),
   validateToken: (token: string): Promise<{ valid: boolean; login: string; expired?: boolean }> =>
@@ -31,8 +31,8 @@ const api = {
   resetViewedPRs: (): Promise<void> => ipcRenderer.invoke('reset-viewed-prs'),
 
   // Events
-  onPRsUpdated: (cb: (prs: PR[]) => void): (() => void) => {
-    const handler = (_: Electron.IpcRendererEvent, prs: PR[]): void => cb(prs)
+  onPRsUpdated: (cb: (data: GroupedPRData) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, data: GroupedPRData): void => cb(data)
     ipcRenderer.on('prs-updated', handler)
     return () => ipcRenderer.removeListener('prs-updated', handler)
   },

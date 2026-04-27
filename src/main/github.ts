@@ -28,6 +28,17 @@ export interface PR {
   repo: string
 }
 
+export interface PRGroup {
+  label: string
+  prs: PR[]
+  subgroups: PRGroup[]
+}
+
+export interface GroupedPRData {
+  grouped: boolean
+  groups: PRGroup[]
+}
+
 interface RateLimitState {
   remaining: number
   resetAt: number

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(npm create:*)",
+      "Bash(pkill -f \"cev \\\\.\" 2>/dev/null; echo \"done\")",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(node -e \"const Store = require\\('electron-store'\\); console.log\\(typeof Store\\)\")",
+      "Bash(pkill -f \"electron.*gh-pr-notifier\" 2>/dev/null; echo \"killed\")",
+      "Bash(pkill -f \"electron.*gh-pr-notifier\" 2>/dev/null; pkill -f \"electron-vite\" 2>/dev/null; pkill -f \"vite.*5173\\\\|vite.*5174\\\\|vite.*5175\" 2>/dev/null; sleep 1; pgrep -fa \"electron.*gh-pr-notifier\\\\|electron-vite\" || echo \"All clear\")",
+      "Bash(kill 79395 81132 81593 2>/dev/null; sleep 1; kill -9 79395 81132 81593 2>/dev/null; echo \"done\")",
+      "Bash(xargs kill:*)",
+      "Bash(git remote:*)",
+      "Bash(node -e \"\nconst { execSync } = require\\('child_process'\\)\n// Use osascript to add to login items as a quick test — actual setting happens via Electron API at runtime\nconsole.log\\('Login item will be set when app launches via the toggle in Settings > General > Display'\\)\n\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
