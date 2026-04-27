@@ -143,11 +143,14 @@ export async function fetchPRsForRepos(
   }
 }
 
-export async function validateToken(token: string): Promise<{ valid: boolean; login: string }> {
+export async function validateToken(token: string): Promise<{ valid: boolean; login: string; expired?: boolean }> {
   try {
     const response = await fetch('https://api.github.com/user', {
       headers: { authorization: `bearer ${token}` }
     })
+    if (response.status === 401) {
+      return { valid: false, login: '', expired: true }
+    }
     if (!response.ok) return { valid: false, login: '' }
     const data = (await response.json()) as { login: string }
     return { valid: true, login: data.login }

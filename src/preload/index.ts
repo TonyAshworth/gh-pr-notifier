@@ -7,8 +7,9 @@ const api = {
   getPRs: (): Promise<PR[]> => ipcRenderer.invoke('get-prs'),
   getSettings: (): Promise<Settings> => ipcRenderer.invoke('get-settings'),
   saveSettings: (s: Partial<Settings>): Promise<void> => ipcRenderer.invoke('save-settings', s),
-  validateToken: (token: string): Promise<{ valid: boolean; login: string }> =>
+  validateToken: (token: string): Promise<{ valid: boolean; login: string; expired?: boolean }> =>
     ipcRenderer.invoke('validate-token', token),
+  checkTokenExpired: (): Promise<boolean> => ipcRenderer.invoke('check-token-expired'),
   saveToken: (token: string): Promise<void> => ipcRenderer.invoke('save-token', token),
   clearToken: (): Promise<void> => ipcRenderer.invoke('clear-token'),
   hasToken: (): Promise<boolean> => ipcRenderer.invoke('has-token'),

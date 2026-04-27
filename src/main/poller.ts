@@ -16,15 +16,18 @@ let unreadCount = 0
 let onPRsUpdated: PRsUpdatedCallback | null = null
 let onUnreadCountChanged: UnreadCountCallback | null = null
 let onPRViewed: PRViewedCallback | null = null
+let onTokenExpired: ((expired: boolean) => void) | null = null
 
 export function setCallbacks(
   prsUpdated: PRsUpdatedCallback,
   unreadChanged: UnreadCountCallback,
-  prViewed: PRViewedCallback
+  prViewed: PRViewedCallback,
+  tokenExpired?: (expired: boolean) => void
 ): void {
   onPRsUpdated = prsUpdated
   onUnreadCountChanged = unreadChanged
   onPRViewed = prViewed
+  onTokenExpired = tokenExpired ?? null
 }
 
 export function getCurrentPRs(): PR[] {
@@ -75,6 +78,20 @@ async function runPollCycle(): Promise<void> {
 
   console.log('[poller] Fetching PRs')
   const prs = await fetchPRsForRepos(token, settings.watchedRepos)
+
+  // If we got no PRs but have watched repos, check if token expired
+  if (prs.length === 0 && settings.watchedRepos.length > 0) {
+    const { validateToken } = await import('./github')
+    const validation = await validateToken(token)
+    if (validation.expired) {
+      console.warn('[poller] Token has expired')
+      onTokenExpired?.(true)
+      return
+    }
+  }
+
+  onTokenExpired?.(false)
+
   currentPRs = prs
   onPRsUpdated?.(prs)
 
