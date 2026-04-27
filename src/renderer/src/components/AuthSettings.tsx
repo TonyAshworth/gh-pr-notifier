@@ -3,11 +3,20 @@ import { useState, useEffect } from 'react'
 export default function AuthSettings(): JSX.Element {
   const [token, setToken] = useState('')
   const [hasToken, setHasToken] = useState(false)
+  const [tokenExpired, setTokenExpired] = useState(false)
   const [validating, setValidating] = useState(false)
   const [status, setStatus] = useState<{ ok: boolean; login?: string; msg?: string } | null>(null)
 
   useEffect(() => {
-    window.api.hasToken().then(setHasToken)
+    const checkToken = async (): Promise<void> => {
+      const has = await window.api.hasToken()
+      setHasToken(has)
+      if (has) {
+        const expired = await window.api.checkTokenExpired()
+        setTokenExpired(expired)
+      }
+    }
+    checkToken()
   }, [])
 
   const handleValidateAndSave = async (): Promise<void> => {
@@ -35,20 +44,24 @@ export default function AuthSettings(): JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>Personal Access Token</div>
-      {hasToken && (
+      {hasToken ? (
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            color: 'var(--success)',
+            color: tokenExpired ? 'var(--danger)' : 'var(--success)',
             fontSize: 12
           }}
         >
-          <span>Token saved</span>
+          <span>{tokenExpired ? 'Token expired — refresh it below' : 'Token saved'}</span>
           <button onClick={handleClear} style={{ color: 'var(--danger)', fontSize: 12 }}>
             Remove
           </button>
+        </div>
+      ) : (
+        <div style={{ color: 'var(--danger)', fontSize: 12 }}>
+          No token set — add one above to get started
         </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>

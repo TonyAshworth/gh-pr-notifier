@@ -9,9 +9,16 @@ import { filterPRsForDisplay } from './state'
 import type { PR } from './github'
 
 let popoverWindow: Electron.BrowserWindow | null = null
+let tokenExpired = false
 
 function updateTrayIcon(): void {
   const settings = getSettings()
+
+  if (tokenExpired) {
+    setTrayIcon(settings.iconExpiredToken)
+    return
+  }
+
   const filtered = filterPRsForDisplay(getCurrentPRs(), settings)
   const count = getUnreadCount()
   const config = count > 0
@@ -48,6 +55,13 @@ app.whenReady().then(() => {
     },
     (key: string, updatedAt: string) => {
       popoverWindow?.webContents.send('pr-viewed', key, updatedAt)
+    },
+    (expired: boolean) => {
+      tokenExpired = expired
+      updateTrayIcon()
+      if (expired) {
+        popoverWindow?.webContents.send('token-expired')
+      }
     }
   )
 
@@ -85,6 +99,13 @@ ipcMain.handle('save-settings', (_e, partial) => {
 
 ipcMain.handle('validate-token', async (_e, token: string) => {
   return validateToken(token)
+})
+
+ipcMain.handle('check-token-expired', async () => {
+  const token = loadToken()
+  if (!token) return false
+  const result = await validateToken(token)
+  return result.expired ?? false
 })
 
 ipcMain.handle('save-token', (_e, token: string) => {
@@ -152,16 +173,6 @@ ipcMain.handle('get-launch-at-login', () => {
 })
 
 ipcMain.handle('set-launch-at-login', (_e, enable: boolean) => {
-  if (app.isPackaged) {
-    app.setLoginItemSettings({ openAtLogin: enable })
-  } else {
-    // In dev mode the execPath is the raw Electron binary; pass the app path
-    // as an argument so the login item launches the app correctly.
-    app.setLoginItemSettings({
-      openAtLogin: enable,
-      path: process.execPath,
-      args: [app.getAppPath()]
-    })
-  }
+  app.setLoginItemSettings({ openAtLogin: enable })
 })
 

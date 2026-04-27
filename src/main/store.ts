@@ -5,7 +5,7 @@ export type IconColor =
   | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink'
   | 'black' | 'white' | 'gray'
 
-export type IconFill = 'solid' | 'outline' | 'stripes' | 'dots' | 'crosshatch'
+export type IconFill = 'solid' | 'outline' | 'stripes' | 'dots' | 'crosshatch' | 'hazard'
 
 export interface IconStateConfig {
   color: IconColor
@@ -28,6 +28,7 @@ export interface Settings {
   iconNoPRs: IconStateConfig
   iconAllViewed: IconStateConfig
   iconUnread: IconStateConfig
+  iconExpiredToken: IconStateConfig
 }
 
 interface StoreSchema extends Settings {
@@ -49,9 +50,10 @@ const defaults: StoreSchema = {
   theme: 'system',
   soundEnabled: true,
   notificationSound: 'chime',
-  iconNoPRs:     { color: 'black', fill: 'outline' },
-  iconAllViewed: { color: 'green', fill: 'solid' },
-  iconUnread:    { color: 'red',   fill: 'solid' },
+  iconNoPRs:        { color: 'black', fill: 'outline' },
+  iconAllViewed:    { color: 'green', fill: 'solid' },
+  iconUnread:       { color: 'red',   fill: 'solid' },
+  iconExpiredToken: { color: 'orange', fill: 'hazard' },
   encryptedToken: '',
   prState: {},
   viewedPRs: {}
@@ -103,6 +105,7 @@ export function getSettings(): Settings {
     iconNoPRs: store.get('iconNoPRs'),
     iconAllViewed: store.get('iconAllViewed'),
     iconUnread: store.get('iconUnread'),
+    iconExpiredToken: store.get('iconExpiredToken'),
   }
 }
 

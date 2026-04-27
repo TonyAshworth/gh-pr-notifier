@@ -70,45 +70,78 @@ function encodePNG(rgba: Buffer): Buffer {
   ])
 }
 
+function distToTriangle(px: number, py: number, radius: number): number {
+  // Equilateral triangle centered at (CX, CY), pointing up, inscribed in circle of given radius
+  const angle = Math.PI / 2  // point up
+  const corners = [
+    [Math.cos(angle) * radius + CX, Math.sin(angle) * radius + CY],
+    [Math.cos(angle + 2 * Math.PI / 3) * radius + CX, Math.sin(angle + 2 * Math.PI / 3) * radius + CY],
+    [Math.cos(angle + 4 * Math.PI / 3) * radius + CX, Math.sin(angle + 4 * Math.PI / 3) * radius + CY],
+  ]
+
+  // Minimum distance to any edge
+  let minDist = Infinity
+  for (let i = 0; i < 3; i++) {
+    const p1 = corners[i]
+    const p2 = corners[(i + 1) % 3]
+    // Distance from point to line segment
+    const dx = p2[0] - p1[0]
+    const dy = p2[1] - p1[1]
+    const t = Math.max(0, Math.min(1, ((px - p1[0]) * dx + (py - p1[1]) * dy) / (dx * dx + dy * dy)))
+    const nearX = p1[0] + t * dx
+    const nearY = p1[1] + t * dy
+    const d = Math.sqrt((px - nearX) ** 2 + (py - nearY) ** 2)
+    minDist = Math.min(minDist, d)
+  }
+  return minDist
+}
+
 export function generateTrayIcon(config: IconStateConfig): NativeImage {
   const [cr, cg, cb] = COLOR_MAP[config.color]
   const rgba = Buffer.alloc(SIZE * SIZE * 4, 0)  // all transparent
   const STROKE = 2.5
+  const fill = config.fill as IconFill
 
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const dx = x - CX
       const dy = y - CY
       const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist > R + 0.5) continue
-
-      // Anti-alias at outer edge
-      const outerAlpha = dist > R - 0.5 ? Math.round((R + 0.5 - dist) * 255) : 255
 
       let alpha = 0
-      const fill = config.fill as IconFill
 
-      if (fill === 'solid') {
-        alpha = outerAlpha
-      } else if (fill === 'outline') {
-        const innerR = R - STROKE
-        if (dist >= innerR - 0.5) {
-          const innerAlpha = dist < innerR + 0.5
-            ? Math.round((dist - (innerR - 0.5)) * 255)
-            : 255
-          alpha = Math.min(outerAlpha, innerAlpha)
+      if (fill === 'hazard') {
+        // Rounded triangle (hazard symbol)
+        const triDist = distToTriangle(x, y, R - 1)
+        if (triDist < 1) {
+          alpha = Math.round((1 - triDist) * 255)
         }
-      } else if (fill === 'stripes') {
-        if (((x + y) % 8) < 4) alpha = outerAlpha
-      } else if (fill === 'dots') {
-        const gx = ((x % 6) + 6) % 6
-        const gy = ((y % 6) + 6) % 6
-        const d = Math.sqrt((gx - 2.5) * (gx - 2.5) + (gy - 2.5) * (gy - 2.5))
-        if (d < 2) alpha = outerAlpha
-      } else if (fill === 'crosshatch') {
-        const d1 = ((x + y) % 6) < 2
-        const d2 = (((x - y) % 6) + 6) % 6 < 2
-        if (d1 || d2) alpha = outerAlpha
+      } else {
+        if (dist > R + 0.5) continue
+        const outerAlpha = dist > R - 0.5 ? Math.round((R + 0.5 - dist) * 255) : 255
+
+        if (fill === 'solid') {
+          alpha = outerAlpha
+        } else if (fill === 'outline') {
+          const innerR = R - STROKE
+          if (dist >= innerR - 0.5) {
+            const innerAlpha = dist < innerR + 0.5
+              ? Math.round((dist - (innerR - 0.5)) * 255)
+              : 255
+            alpha = Math.min(outerAlpha, innerAlpha)
+          }
+        } else if (fill === 'stripes') {
+          if (((x + y) % 8) < 4) alpha = outerAlpha
+        } else if (fill === 'dots') {
+          const gx = ((x % 6) + 6) % 6
+          const gy = ((y % 6) + 6) % 6
+          const d = Math.sqrt((gx - 2.5) * (gx - 2.5) + (gy - 2.5) * (gy - 2.5))
+          if (d < 2) alpha = outerAlpha
+        } else if (fill === 'crosshatch') {
+          const d1 = ((x + y) % 6) < 2
+          const d2 = (((x - y) % 6) + 6) % 6 < 2
+          if (d1 || d2) alpha = outerAlpha
+        }
       }
 
       if (alpha > 0) {
